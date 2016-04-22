@@ -64,7 +64,14 @@ defmodule ESpec.Assertions.Accepted do
 
   defp error_message(subject, [func, args, opts], result, positive) do
     to = if positive, do: "to", else: "not to"
-    but = "it accepted the function `#{result}` times"
+    history = :meck.history(subject)
+    |> Enum.flat_map(fn
+      {_pid, {_subject, matched_func, args}, _} when matched_func == func ->
+        ["  #{func}(#{args|>Enum.map_join(", ", &inspect/1)})"]
+      _ -> []
+    end)
+    |> Enum.join("\n")
+    but = "it accepted the function `#{result}` times. Here are all calls recorded:\n#{history}"
     pid = Keyword.get(opts, :pid) || :any
     opts_count = Keyword.get(opts, :count) || :any
     count = if opts_count == :any, do: "at least once", else: "`#{opts_count}` times"
